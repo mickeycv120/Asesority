@@ -1,12 +1,41 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Menu, X, GraduationCap } from "lucide-react"
+import { Menu, X, GraduationCap, LogOut, User } from "lucide-react"
+import { createBrowserClient } from "@/lib/supabase/clients"
+import { useRouter } from "next/navigation"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createBrowserClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (user) {
+        setIsAuthenticated(true)
+        setUserEmail(user.email || null)
+      }
+    }
+
+    checkAuth()
+  }, [])
+
+  const handleLogout = async () => {
+    const supabase = createBrowserClient()
+    await supabase.auth.signOut()
+    setIsAuthenticated(false)
+    setUserEmail(null)
+    router.push("/")
+  }
 
   return (
     <nav className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b border-border">
@@ -34,14 +63,28 @@ export function Navigation() {
             </Link>
           </div>
 
-          {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" asChild>
-              <Link href="/login">Iniciar Sesión</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/register">Registrarse</Link>
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  <span>{userEmail}</span>
+                </div>
+                <Button variant="ghost" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Cerrar Sesión
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/login">Iniciar Sesión</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/register">Registrarse</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -82,12 +125,27 @@ export function Navigation() {
               Dashboard
             </Link>
             <div className="flex flex-col space-y-2 pt-4">
-              <Button variant="ghost" asChild>
-                <Link href="/login">Iniciar Sesión</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/register">Registrarse</Link>
-              </Button>
+              {isAuthenticated ? (
+                <>
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground px-3 py-2">
+                    <User className="h-4 w-4" />
+                    <span>{userEmail}</span>
+                  </div>
+                  <Button variant="ghost" onClick={handleLogout}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Cerrar Sesión
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" asChild>
+                    <Link href="/login">Iniciar Sesión</Link>
+                  </Button>
+                  <Button asChild>
+                    <Link href="/register">Registrarse</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}

@@ -1,9 +1,30 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { BookOpen, Users, Calendar, TrendingUp } from "lucide-react"
 import Link from "next/link"
+import { createBrowserClient } from "@/lib/supabase/clients"
 
 export function HeroSection() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createBrowserClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (user) {
+        setIsAuthenticated(true)
+      }
+    }
+
+    checkAuth()
+  }, [])
+
   return (
     <section className="relative overflow-hidden bg-background">
       {/* Hero Content */}
@@ -22,12 +43,25 @@ export function HeroSection() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" asChild className="text-lg px-8">
-                <Link href="/register">Comenzar ahora</Link>
-              </Button>
-              <Button variant="outline" size="lg" asChild className="text-lg px-8 bg-transparent">
-                <Link href="/asesorias">Ver asesorías</Link>
-              </Button>
+              {isAuthenticated ? (
+                <>
+                  <Button size="lg" asChild className="text-lg px-8">
+                    <Link href="/dashboard">Ir al Dashboard</Link>
+                  </Button>
+                  <Button variant="outline" size="lg" asChild className="text-lg px-8 bg-transparent">
+                    <Link href="/asesorias">Gestionar asesorías</Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button size="lg" asChild className="text-lg px-8">
+                    <Link href="/register">Comenzar ahora</Link>
+                  </Button>
+                  <Button variant="outline" size="lg" asChild className="text-lg px-8 bg-transparent">
+                    <Link href="/asesorias">Ver asesorías</Link>
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Stats */}
