@@ -1,8 +1,11 @@
-export default function Home() {
+import { HeroSection } from "@/components/hero-section"
+
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center font-sans">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16sm:items-start">
+    <div className="min-h-screen">
+      <main>
+        <HeroSection />
       </main>
     </div>
-  );
+  )
 }
