@@ -39,13 +39,19 @@ export default async function DashboardPage() {
     .order("scheduled_date", { ascending: false })
     .limit(5)
 
-  // Obtener los nombres de estudiantes y maestros por separado
-  const studentIds = recentAdvisoriesData?.map((adv) => adv.student_id).filter(Boolean) || []
-  const teacherIds = recentAdvisoriesData?.map((adv) => adv.teacher_id).filter(Boolean) || []
+  // Obtener los nombres de estudiantes y maestros usando las vistas
+  const studentIds = [...new Set(recentAdvisoriesData?.map((adv) => adv.student_id).filter(Boolean) || [])]
+  const teacherIds = [...new Set(recentAdvisoriesData?.map((adv) => adv.teacher_id).filter(Boolean) || [])]
 
-  const { data: studentsData } = await supabase.from("students").select("id, full_name").in("id", studentIds)
+  const { data: studentsData } = await supabase
+    .from("student_profiles")
+    .select("id, full_name")
+    .in("id", studentIds)
 
-  const { data: teachersData } = await supabase.from("teachers").select("id, full_name").in("id", teacherIds)
+  const { data: teachersData } = await supabase
+    .from("teacher_profiles")
+    .select("id, full_name")
+    .in("id", teacherIds)
 
   // Crear mapas para búsqueda rápida
   const studentsMap = new Map(studentsData?.map((s) => [s.id, s.full_name]) || [])

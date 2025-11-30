@@ -31,6 +31,7 @@ export function RegisterForm() {
     department: "",
     specialties: "",
   })
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,7 +73,7 @@ export function RegisterForm() {
       console.log("[v0] Creando cliente Supabase")
       const supabase = createClient()
 
-      console.log("[v0] Llamando a signUp con metadata completo")
+      console.log("[v0] Llamando a signUp")
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -92,14 +93,27 @@ export function RegisterForm() {
 
       console.log("[v0] Usuario creado exitosamente con ID:", authData.user.id)
 
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      console.log("[v0] Insertando en tabla users")
+      const { error: usersError } = await supabase.from("users").insert({
+        id: authData.user.id,
+        email: formData.email,
+        full_name: formData.fullName,
+        user_type: formData.userType,
+      })
+
+      // Ignorar error si el registro ya existe (el trigger lo creó)
+      if (usersError && !usersError.message.includes("duplicate")) {
+        console.error("[v0] Error al insertar en users:", usersError)
+      } else {
+        console.log("[v0] Usuario insertado en tabla users correctamente")
+      }
 
       if (formData.userType === "student") {
         console.log("[v0] Insertando datos de estudiante")
         const { error: studentError } = await supabase.from("students").insert({
           id: authData.user.id,
-          full_name: formData.fullName,
-          email: formData.email,
           enrollment_number: formData.studentId,
           career: formData.career,
           semester: Number.parseInt(formData.semester),
@@ -113,8 +127,6 @@ export function RegisterForm() {
         console.log("[v0] Insertando datos de profesor")
         const { error: teacherError } = await supabase.from("teachers").insert({
           id: authData.user.id,
-          full_name: formData.fullName,
-          email: formData.email,
           employee_number: formData.employeeId,
           department: formData.department,
           specialties: formData.specialties.split(",").map((s) => s.trim()),

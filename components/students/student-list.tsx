@@ -10,27 +10,13 @@ import { useRouter } from "next/navigation"
 
 interface Student {
   id: string
+  full_name: string
+  email: string
   enrollment_number: string
   career: string
   semester: number
   phone: string | null
   address: string | null
-  created_at: string
-  updated_at: string
-  full_name?: string
-  email?: string
-  user_type?: string
-}
-
-type StudentForModal = {
-  id: string
-  student_id: string
-  enrollment_number: string
-  career: string
-  semester: number
-  phone: string | null
-  address: string | null
-  user_id: string | null
   created_at: string
   updated_at: string
 }
@@ -38,7 +24,7 @@ type StudentForModal = {
 export function StudentList() {
   const [student, setStudent] = useState<Student | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedStudent, setSelectedStudent] = useState<StudentForModal | null>(null)
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [modalMode, setModalMode] = useState<"create" | "edit" | "view">("create")
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
@@ -53,7 +39,6 @@ export function StudentList() {
       setIsLoading(true)
       const supabase = createClient()
 
-      // Obtener el usuario autenticado
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -63,38 +48,10 @@ export function StudentList() {
         return
       }
 
-      // Obtener el perfil del estudiante usando el ID del usuario
-      const { data: studentData, error: studentError } = await supabase
-        .from("students")
-        .select("*")
-        .eq("id", user.id)
-        .single()
+      const { data, error } = await supabase.from("student_profiles").select("*").eq("id", user.id).single()
 
-      if (studentError) throw studentError
-
-      // Obtener datos del usuario desde la tabla users
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("full_name, email, user_type")
-        .eq("id", user.id)
-        .single()
-
-      if (userError) {
-        console.warn("Error al obtener datos de usuario:", userError)
-        // Continuar sin datos de usuario
-        setStudent(studentData)
-        return
-      }
-
-      // Combinar datos de student y user
-      const combinedData = {
-        ...studentData,
-        full_name: userData?.full_name,
-        email: userData?.email,
-        user_type: userData?.user_type,
-      }
-
-      setStudent(combinedData)
+      if (error) throw error
+      setStudent(data)
     } catch (error) {
       console.error("Error loading profile:", error)
     } finally {
@@ -103,47 +60,40 @@ export function StudentList() {
   }
 
   const handleEditProfile = () => {
-    const adaptedStudent: StudentForModal | null = student
-      ? {
-          id: student.id,
-          student_id: student.id, 
-          enrollment_number: student.enrollment_number,
-          career: student.career,
-          semester: student.semester,
-          phone: student.phone,
-          address: student.address,
-          user_id: student.id,
-          created_at: student.created_at,
-          updated_at: student.updated_at,
-        }
-      : null
-    setSelectedStudent(adaptedStudent)
+    setSelectedStudent(student)
     setModalMode("edit")
     setIsModalOpen(true)
   }
 
-  const handleSaveStudent = async (studentData: {
-    student_id?: string
-    career: string
-    semester: number
-    phone: string | null
-    address: string | null
-    user_id?: string | null
-  }) => {
+  const handleSaveStudent = async (studentData: Omit<Student, "id" | "created_at" | "updated_at">) => {
     try {
       const supabase = createClient()
 
       if (student) {
-        const { error } = await supabase
+        // Actualizar nombre y email en users
+        const { error: usersError } = await supabase
+          .from("users")
+          .update({
+            full_name: studentData.full_name,
+            email: studentData.email,
+          })
+          .eq("id", student.id)
+
+        if (usersError) throw usersError
+
+        // Actualizar campos específicos en students
+        const { error: studentsError } = await supabase
           .from("students")
           .update({
+            enrollment_number: studentData.enrollment_number,
             career: studentData.career,
             semester: studentData.semester,
             phone: studentData.phone,
             address: studentData.address,
           })
           .eq("id", student.id)
-        if (error) throw error
+
+        if (studentsError) throw studentsError
       }
 
       await loadMyProfile()
@@ -197,8 +147,13 @@ export function StudentList() {
             </div>
 
             <div className="space-y-2">
+              <div className="text-sm font-medium text-muted-foreground">Matrícula</div>
+              <div className="text-base">{student.enrollment_number}</div>
+            </div>
+
+            <div className="space-y-2">
               <div className="text-sm font-medium text-muted-foreground">Email</div>
-              <div className="text-base">{student.email || "N/A"}</div>
+              <div className="text-base">{student.email}</div>
             </div>
 
             <div className="space-y-2">

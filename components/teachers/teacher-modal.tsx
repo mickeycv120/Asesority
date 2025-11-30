@@ -19,16 +19,16 @@ import { X } from "lucide-react"
 
 interface Teacher {
   id: string
+  full_name: string
+  email: string
+  employee_number: string
   department: string
-  specialties: string[]
+  specialties: string[] | string
   available_hours: string | null
   phone: string | null
   office: string | null
   created_at: string
   updated_at: string
-  // Datos del usuario (desde JOIN con users)
-  full_name?: string
-  email?: string
   user_type?: string
 }
 
@@ -55,9 +55,22 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
 
   useEffect(() => {
     if (teacher && (mode === "edit" || mode === "view")) {
+      // Manejar specialties que puede venir como string o array
+      const specialtiesArray = Array.isArray(teacher.specialties)
+        ? teacher.specialties
+        : typeof teacher.specialties === "string"
+          ? (() => {
+              try {
+                return JSON.parse(teacher.specialties)
+              } catch {
+                return teacher.specialties.split(",").map((s) => s.trim())
+              }
+            })()
+          : []
+
       setFormData({
         department: teacher.department,
-        specialties: [...teacher.specialties],
+        specialties: specialtiesArray,
         available_hours: teacher.available_hours || "",
         phone: teacher.phone || "",
         office: teacher.office || "",

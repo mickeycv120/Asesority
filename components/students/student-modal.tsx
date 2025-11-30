@@ -16,13 +16,13 @@ import { Label } from "@/components/ui/label"
 
 interface Student {
   id: string
-  student_id: string
+  full_name: string
+  email: string
   enrollment_number: string
   career: string
   semester: number
   phone: string | null
   address: string | null
-  user_id: string | null
   created_at: string
   updated_at: string
 }
@@ -37,13 +37,13 @@ interface StudentModalProps {
 
 export function StudentModal({ isOpen, onClose, onSave, student, mode }: StudentModalProps) {
   const [formData, setFormData] = useState({
-    student_id: "",
+    full_name: "",
+    email: "",
     enrollment_number: "",
     career: "",
     semester: 1,
     phone: "",
     address: "",
-    user_id: null as string | null,
   })
 
   const [isLoading, setIsLoading] = useState(false)
@@ -51,23 +51,23 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
   useEffect(() => {
     if (student && (mode === "edit" || mode === "view")) {
       setFormData({
-        student_id: student.student_id,
-        enrollment_number: student.enrollment_number,
+        full_name: student.full_name || "",
+        email: student.email || "",
+        enrollment_number: student.enrollment_number || "",
         career: student.career,
         semester: student.semester,
         phone: student.phone || "",
         address: student.address || "",
-        user_id: student.user_id,
       })
     } else {
       setFormData({
-        student_id: "",
+        full_name: "",
+        email: "",
         enrollment_number: "",
         career: "",
         semester: 1,
         phone: "",
         address: "",
-        user_id: null,
       })
     }
   }, [student, mode])
@@ -116,8 +116,44 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === "view" && student && (
+            <>
+              <div className="space-y-2">
+                <Label>ID</Label>
+                <Input value={student.id} readOnly />
+              </div>
+            </>
+          )}
+
           <div className="space-y-2">
-            <Label htmlFor="student_id">Matrícula</Label>
+            <Label htmlFor="full_name">Nombre Completo</Label>
+            <Input
+              id="full_name"
+              name="full_name"
+              value={formData.full_name}
+              onChange={handleChange}
+              placeholder="Juan Pérez"
+              required
+              readOnly={isReadOnly}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="juan@universidad.edu"
+              required
+              readOnly={isReadOnly}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="enrollment_number">Matrícula</Label>
             <Input
               id="enrollment_number"
               name="enrollment_number"
