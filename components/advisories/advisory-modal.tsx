@@ -15,60 +15,63 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { createBrowserClient } from "@/lib/supabase/clients"
 
 interface Advisory {
   id: string
-  studentId: string
-  studentName: string
-  teacherId: string
-  teacherName: string
+  student_id: string
+  teacher_id: string
   subject: string
   topic: string
-  date: string
-  time: string
+  scheduled_date: string
   duration: number
-  type: "individual" | "group"
-  status: "scheduled" | "confirmed" | "completed" | "cancelled"
+  advisory_type: "individual" | "group"
+  status: "scheduled" | "completed" | "cancelled"
   location: string
   notes: string
-  createdAt: string
+  created_at: string
 }
+
+type AdvisoryFormData = Omit<Advisory, "id" | "created_at">
 
 interface AdvisoryModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (advisory: Omit<Advisory, "id" | "createdAt">) => void
+  onSave: (advisory: AdvisoryFormData) => void
   advisory: Advisory | null
   mode: "create" | "edit" | "view"
+  userRole?: string | null
+  currentUser?: { id: string; user_type?: string } | null
 }
 
-// Mock data para los selects
-const mockStudents = [
-  { id: "1", name: "Ana García" },
-  { id: "2", name: "Carlos Rodríguez" },
-  { id: "3", name: "María López" },
-]
+interface Student {
+  id: string
+  full_name: string
+  email: string
+  enrollment_number: string
+}
 
-const mockTeachers = [
-  { id: "1", name: "Dr. Elena García" },
-  { id: "2", name: "Dr. Carlos Rodríguez" },
-  { id: "3", name: "Dra. María López" },
-  { id: "4", name: "Dr. José Martínez" },
-]
+interface Teacher {
+  id: string
+  full_name: string
+  email: string
+  department: string
+}
 
-export function AdvisoryModal({ isOpen, onClose, onSave, advisory, mode }: AdvisoryModalProps) {
-  const [formData, setFormData] = useState({
-    studentId: "",
-    studentName: "",
-    teacherId: "",
-    teacherName: "",
+export function AdvisoryModal({ isOpen, onClose, onSave, advisory, mode, userRole, currentUser }: AdvisoryModalProps) {
+  const [students, setStudents] = useState<Student[]>([])
+  const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [loadingData, setLoadingData] = useState(true)
+
+  const [formData, setFormData] = useState<AdvisoryFormData>({
+    student_id: "",
+    teacher_id: "",
     subject: "",
     topic: "",
-    date: "",
-    time: "",
+    scheduled_date: "",
     duration: 60,
-    type: "individual" as "individual" | "group",
-    status: "scheduled" as "scheduled" | "confirmed" | "completed" | "cancelled",
+    advisory_type: "individual",
+    status: "scheduled",
     location: "",
     notes: "",
   })
@@ -76,40 +79,73 @@ export function AdvisoryModal({ isOpen, onClose, onSave, advisory, mode }: Advis
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
+    const loadData = async () => {
+      setLoadingData(true)
+      const supabase = createBrowserClient()
+
+      // Cargar estudiantes desde la vista student_profiles
+      const { data: studentsData, error: studentsError } = await supabase
+        .from("student_profiles")
+        .select("id, full_name, email, enrollment_number")
+        .order("full_name")
+
+      if (studentsError) {
+        console.error("[v0] Error cargando estudiantes:", studentsError)
+      } else {
+        setStudents(studentsData || [])
+      }
+
+      // Cargar maestros desde la vista teacher_profiles
+      const { data: teachersData, error: teachersError } = await supabase
+        .from("teacher_profiles")
+        .select("id, full_name, email, department")
+        .order("full_name")
+
+      if (teachersError) {
+        console.error("[v0] Error cargando maestros:", teachersError)
+      } else {
+        setTeachers(teachersData || [])
+      }
+
+      setLoadingData(false)
+    }
+
+    if (isOpen) {
+      loadData()
+    }
+  }, [isOpen])
+
+  useEffect(() => {
     if (advisory && (mode === "edit" || mode === "view")) {
       setFormData({
-        studentId: advisory.studentId,
-        studentName: advisory.studentName,
-        teacherId: advisory.teacherId,
-        teacherName: advisory.teacherName,
+        student_id: advisory.student_id,
+        teacher_id: advisory.teacher_id,
         subject: advisory.subject,
         topic: advisory.topic,
-        date: advisory.date,
-        time: advisory.time,
+        scheduled_date: advisory.scheduled_date ? new Date(advisory.scheduled_date).toISOString().slice(0, 16) : "",
         duration: advisory.duration,
-        type: advisory.type,
+        advisory_type: advisory.advisory_type,
         status: advisory.status,
         location: advisory.location,
-        notes: advisory.notes,
+        notes: advisory.notes || "",
       })
     } else {
+      const defaultStudentId = userRole === "student" ? currentUser?.id || "" : ""
+
       setFormData({
-        studentId: "",
-        studentName: "",
-        teacherId: "",
-        teacherName: "",
+        student_id: defaultStudentId,
+        teacher_id: "",
         subject: "",
         topic: "",
-        date: "",
-        time: "",
+        scheduled_date: "",
         duration: 60,
-        type: "individual",
+        advisory_type: "individual",
         status: "scheduled",
         location: "",
         notes: "",
       })
     }
-  }, [advisory, mode])
+  }, [advisory, mode, userRole, currentUser])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -117,8 +153,12 @@ export function AdvisoryModal({ isOpen, onClose, onSave, advisory, mode }: Advis
 
     setIsLoading(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500)) // Simular API call
-      onSave(formData)
+      const dataToSave = {
+        ...formData,
+        scheduled_date: new Date(formData.scheduled_date).toISOString(),
+      }
+
+      await onSave(dataToSave)
     } finally {
       setIsLoading(false)
     }
@@ -129,26 +169,6 @@ export function AdvisoryModal({ isOpen, onClose, onSave, advisory, mode }: Advis
     setFormData((prev) => ({
       ...prev,
       [name]: name === "duration" ? Number.parseInt(value) || 60 : value,
-    }))
-  }
-
-  const handleStudentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const studentId = e.target.value
-    const student = mockStudents.find((s) => s.id === studentId)
-    setFormData((prev) => ({
-      ...prev,
-      studentId,
-      studentName: student?.name || "",
-    }))
-  }
-
-  const handleTeacherChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const teacherId = e.target.value
-    const teacher = mockTeachers.find((t) => t.id === teacherId)
-    setFormData((prev) => ({
-      ...prev,
-      teacherId,
-      teacherName: teacher?.name || "",
     }))
   }
 
@@ -179,6 +199,7 @@ export function AdvisoryModal({ isOpen, onClose, onSave, advisory, mode }: Advis
   }
 
   const isReadOnly = mode === "view"
+  const canChangeStudent = userRole !== "student"
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -191,39 +212,39 @@ export function AdvisoryModal({ isOpen, onClose, onSave, advisory, mode }: Advis
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="studentId">Estudiante</Label>
+              <Label htmlFor="student_id">Estudiante</Label>
               <select
-                id="studentId"
-                name="studentId"
-                value={formData.studentId}
-                onChange={handleStudentChange}
+                id="student_id"
+                name="student_id"
+                value={formData.student_id}
+                onChange={handleChange}
                 className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                 required
-                disabled={isReadOnly}
+                disabled={isReadOnly || !canChangeStudent || loadingData}
               >
-                <option value="">Seleccionar estudiante</option>
-                {mockStudents.map((student) => (
+                <option value="">{loadingData ? "Cargando..." : "Seleccionar estudiante"}</option>
+                {students.map((student) => (
                   <option key={student.id} value={student.id}>
-                    {student.name}
+                    {student.full_name} ({student.enrollment_number})
                   </option>
                 ))}
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="teacherId">Profesor</Label>
+              <Label htmlFor="teacher_id">Profesor</Label>
               <select
-                id="teacherId"
-                name="teacherId"
-                value={formData.teacherId}
-                onChange={handleTeacherChange}
+                id="teacher_id"
+                name="teacher_id"
+                value={formData.teacher_id}
+                onChange={handleChange}
                 className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                 required
-                disabled={isReadOnly}
+                disabled={isReadOnly || loadingData}
               >
-                <option value="">Seleccionar profesor</option>
-                {mockTeachers.map((teacher) => (
+                <option value="">{loadingData ? "Cargando..." : "Seleccionar profesor"}</option>
+                {teachers.map((teacher) => (
                   <option key={teacher.id} value={teacher.id}>
-                    {teacher.name}
+                    {teacher.full_name} - {teacher.department}
                   </option>
                 ))}
               </select>
@@ -257,26 +278,14 @@ export function AdvisoryModal({ isOpen, onClose, onSave, advisory, mode }: Advis
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date">Fecha</Label>
+              <Label htmlFor="scheduled_date">Fecha y Hora</Label>
               <Input
-                id="date"
-                name="date"
-                type="date"
-                value={formData.date}
-                onChange={handleChange}
-                required
-                readOnly={isReadOnly}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="time">Hora</Label>
-              <Input
-                id="time"
-                name="time"
-                type="time"
-                value={formData.time}
+                id="scheduled_date"
+                name="scheduled_date"
+                type="datetime-local"
+                value={formData.scheduled_date}
                 onChange={handleChange}
                 required
                 readOnly={isReadOnly}
@@ -301,11 +310,11 @@ export function AdvisoryModal({ isOpen, onClose, onSave, advisory, mode }: Advis
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="type">Tipo</Label>
+              <Label htmlFor="advisory_type">Tipo</Label>
               <select
-                id="type"
-                name="type"
-                value={formData.type}
+                id="advisory_type"
+                name="advisory_type"
+                value={formData.advisory_type}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                 disabled={isReadOnly}
@@ -325,7 +334,6 @@ export function AdvisoryModal({ isOpen, onClose, onSave, advisory, mode }: Advis
                 disabled={isReadOnly}
               >
                 <option value="scheduled">Programada</option>
-                <option value="confirmed">Confirmada</option>
                 <option value="completed">Completada</option>
                 <option value="cancelled">Cancelada</option>
               </select>
@@ -363,7 +371,7 @@ export function AdvisoryModal({ isOpen, onClose, onSave, advisory, mode }: Advis
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading || loadingData}>
                 {isLoading ? "Guardando..." : mode === "create" ? "Crear Asesoría" : "Guardar Cambios"}
               </Button>
             </DialogFooter>
