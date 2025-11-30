@@ -37,6 +37,16 @@ export function TeacherList() {
     loadTeachers()
   }, [])
 
+  const parseSpecialties = (specialties: string[] | string | null): string[] => {
+    if (!specialties) return []
+    if (Array.isArray(specialties)) return specialties
+    try {
+      return JSON.parse(specialties)
+    } catch {
+      return typeof specialties === "string" ? specialties.split(",").map((s) => s.trim()) : []
+    }
+  }
+
   const loadTeachers = async () => {
     try {
       setLoading(true)
@@ -72,16 +82,6 @@ export function TeacherList() {
   const handleViewTeacher = (teacher: Teacher) => {
     setSelectedTeacher(teacher)
     setIsModalOpen(true)
-  }
-
-  const parseSpecialties = (specialties: string[] | string | null): string[] => {
-    if (!specialties) return []
-    if (Array.isArray(specialties)) return specialties
-    try {
-      return JSON.parse(specialties)
-    } catch {
-      return typeof specialties === "string" ? specialties.split(",").map((s) => s.trim()) : []
-    }
   }
 
   return (

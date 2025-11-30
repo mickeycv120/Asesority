@@ -24,24 +24,12 @@ interface Advisory {
   location: string
   notes: string
   created_at: string
-  student?: {
-    id: string
-    student_id: string
-    career: string
-    users: {
-      full_name: string
-      email: string
-    }
-  }
-  teacher?: {
-    id: string
-    employee_id: string
-    department: string
-    users: {
-      full_name: string
-      email: string
-    }
-  }
+  student_name?: string
+  student_email?: string
+  student_career?: string
+  teacher_name?: string
+  teacher_email?: string
+  teacher_department?: string
 }
 
 export function AdvisoryList() {
@@ -52,7 +40,7 @@ export function AdvisoryList() {
   const [selectedAdvisory, setSelectedAdvisory] = useState<Advisory | null>(null)
   const [modalMode, setModalMode] = useState<"create" | "edit" | "view">("create")
   const [isLoading, setIsLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState<{ id: string; user_type: string } | null>(null)
+  const [currentUser, setCurrentUser] = useState<{ id: string; user_type?: string } | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
@@ -78,53 +66,54 @@ export function AdvisoryList() {
       setIsLoading(true)
       const supabase = createBrowserClient()
 
-      const query = supabase
-        .from("advisories")
-        .select(
-          `
-          *,
-          student:students!advisories_student_id_fkey (
-            id,
-            student_id,
-            career,
-            users!students_user_id_fkey (
-              full_name,
-              email
-            )
-          ),
-          teacher:teachers!advisories_teacher_id_fkey (
-            id,
-            employee_id,
-            department,
-            users!teachers_user_id_fkey (
-              full_name,
-              email
-            )
-          )
-        `,
-        )
-        .order("scheduled_date", { ascending: false })
+      let query = supabase.from("advisories").select("*").order("scheduled_date", { ascending: false })
 
-      const { data, error } = await query
+      if (userRole === "student") {
+        query = query.eq("student_id", currentUser.id)
+      } else if (userRole === "teacher") {
+        query = query.eq("teacher_id", currentUser.id)
+      }
+
+      const { data: advisoriesData, error } = await query
 
       if (error) {
         console.error("[v0] Error cargando asesorías:", error)
-      } else {
-        setAdvisories(data || [])
+        setIsLoading(false)
+        return
       }
+
+      const { data: studentProfiles } = await supabase.from("student_profiles").select("*")
+      const { data: teacherProfiles } = await supabase.from("teacher_profiles").select("*")
+
+      const studentMap = new Map(studentProfiles?.map((s) => [s.id, s]) || [])
+      const teacherMap = new Map(teacherProfiles?.map((t) => [t.id, t]) || [])
+
+      const enrichedAdvisories = advisoriesData?.map((advisory) => {
+        const student = studentMap.get(advisory.student_id)
+        const teacher = teacherMap.get(advisory.teacher_id)
+
+        return {
+          ...advisory,
+          student_name: student?.full_name || "N/A",
+          student_email: student?.email || "",
+          student_career: student?.career || "",
+          teacher_name: teacher?.full_name || "N/A",
+          teacher_email: teacher?.email || "",
+          teacher_department: teacher?.department || "",
+        }
+      })
+
+      setAdvisories(enrichedAdvisories || [])
       setIsLoading(false)
     }
 
     loadAdvisories()
-  }, [currentUser])
+  }, [currentUser, userRole])
 
   const filteredAdvisories = advisories.filter((advisory) => {
-    const studentName = advisory.student?.users?.full_name || ""
-    const teacherName = advisory.teacher?.users?.full_name || ""
-
     const matchesSearch =
-      studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacherName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (advisory.student_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (advisory.teacher_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
       advisory.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
       advisory.topic.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (advisory.location?.toLowerCase() || "").includes(searchTerm.toLowerCase())
@@ -166,7 +155,9 @@ export function AdvisoryList() {
     }
   }
 
-  const handleSaveAdvisory = async (advisoryData: Omit<Advisory, "id" | "created_at">) => {
+  type AdvisoryFormData = Omit<Advisory, "id" | "created_at" | "student_name" | "student_email" | "student_career" | "teacher_name" | "teacher_email" | "teacher_department">
+
+  const handleSaveAdvisory = async (advisoryData: AdvisoryFormData) => {
     const supabase = createBrowserClient()
 
     if (modalMode === "create") {
@@ -174,64 +165,37 @@ export function AdvisoryList() {
         .from("advisories")
         .insert(advisoryData)
         .select(
-          `
-          *,
-          student:students!advisories_student_id_fkey (
-            id,
-            student_id,
-            career,
-            users!students_user_id_fkey (
-              full_name,
-              email
-            )
-          ),
-          teacher:teachers!advisories_teacher_id_fkey (
-            id,
-            employee_id,
-            department,
-            users!teachers_user_id_fkey (
-              full_name,
-              email
-            )
-          )
-        `,
+          "id, student_id, teacher_id, subject, topic, scheduled_date, duration, advisory_type, status, location, notes, created_at",
         )
         .single()
 
       if (error) {
         console.error("[v0] Error creando asesoría:", error)
-        alert("Error al crear la asesoría")
+        alert("Error al crear la asesoría: " + error.message)
         return
       }
 
-      setAdvisories([data, ...advisories])
+      const { data: student } = await supabase.from("student_profiles").select("*").eq("id", data.student_id).single()
+      const { data: teacher } = await supabase.from("teacher_profiles").select("*").eq("id", data.teacher_id).single()
+
+      const enrichedAdvisory = {
+        ...data,
+        student_name: student?.full_name || "N/A",
+        student_email: student?.email || "",
+        student_career: student?.career || "",
+        teacher_name: teacher?.full_name || "N/A",
+        teacher_email: teacher?.email || "",
+        teacher_department: teacher?.department || "",
+      }
+
+      setAdvisories([enrichedAdvisory, ...advisories])
     } else if (modalMode === "edit" && selectedAdvisory) {
       const { data, error } = await supabase
         .from("advisories")
         .update(advisoryData)
         .eq("id", selectedAdvisory.id)
         .select(
-          `
-          *,
-          student:students!advisories_student_id_fkey (
-            id,
-            student_id,
-            career,
-            users!students_user_id_fkey (
-              full_name,
-              email
-            )
-          ),
-          teacher:teachers!advisories_teacher_id_fkey (
-            id,
-            employee_id,
-            department,
-            users!teachers_user_id_fkey (
-              full_name,
-              email
-            )
-          )
-        `,
+          "id, student_id, teacher_id, subject, topic, scheduled_date, duration, advisory_type, status, location, notes, created_at",
         )
         .single()
 
@@ -241,7 +205,20 @@ export function AdvisoryList() {
         return
       }
 
-      setAdvisories(advisories.map((a) => (a.id === selectedAdvisory.id ? data : a)))
+      const { data: student } = await supabase.from("student_profiles").select("*").eq("id", data.student_id).single()
+      const { data: teacher } = await supabase.from("teacher_profiles").select("*").eq("id", data.teacher_id).single()
+
+      const enrichedAdvisory = {
+        ...data,
+        student_name: student?.full_name || "N/A",
+        student_email: student?.email || "",
+        student_career: student?.career || "",
+        teacher_name: teacher?.full_name || "N/A",
+        teacher_email: teacher?.email || "",
+        teacher_department: teacher?.department || "",
+      }
+
+      setAdvisories(advisories.map((a) => (a.id === selectedAdvisory.id ? enrichedAdvisory : a)))
     }
     setIsModalOpen(false)
   }
@@ -276,12 +253,10 @@ export function AdvisoryList() {
   const canEdit = (advisory: Advisory) => {
     if (userRole === "admin") return true
     if (userRole === "teacher") {
-      // Los maestros pueden editar sus propias asesorías
-      return advisory.teacher?.id === currentUser?.id
+      return advisory.teacher_id === currentUser?.id
     }
     if (userRole === "student") {
-      // Los estudiantes pueden editar sus propias asesorías
-      return advisory.student?.id === currentUser?.id
+      return advisory.student_id === currentUser?.id
     }
     return false
   }
@@ -289,7 +264,7 @@ export function AdvisoryList() {
   const canDelete = (advisory: Advisory) => {
     if (userRole === "admin") return true
     if (userRole === "student") {
-      return advisory.student?.id === currentUser?.id
+      return advisory.student_id === currentUser?.id
     }
     return false
   }
@@ -362,8 +337,8 @@ export function AdvisoryList() {
               <TableBody>
                 {filteredAdvisories.map((advisory) => (
                   <TableRow key={advisory.id}>
-                    <TableCell className="font-medium">{advisory.student?.users?.full_name || "N/A"}</TableCell>
-                    <TableCell>{advisory.teacher?.users?.full_name || "N/A"}</TableCell>
+                    <TableCell className="font-medium">{advisory.student_name}</TableCell>
+                    <TableCell>{advisory.teacher_name}</TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium">{advisory.subject}</div>
