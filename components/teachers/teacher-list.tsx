@@ -1,102 +1,98 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Search, Plus, MoreHorizontal, Edit, Trash2, Eye, Calendar } from "lucide-react"
+import { Search, Plus, MoreHorizontal, Edit, Trash2, Eye, Loader2 } from "lucide-react"
 import { TeacherModal } from "@/components/teachers/teacher-modal"
+import { createClient } from "@/lib/supabase/clients"
 
 interface Teacher {
   id: string
-  firstName: string
-  lastName: string
-  email: string
-  employeeId: string
   department: string
   specialties: string[]
-  phone: string
-  office: string
-  status: "active" | "inactive" | "sabbatical"
-  availableHours: string[]
-  createdAt: string
+  available_hours: string | null
+  phone: string | null
+  office: string | null
+  created_at: string
+  updated_at: string
+  // Datos del usuario (desde JOIN con users)
+  full_name?: string
+  email?: string
+  user_type?: string
 }
 
-const mockTeachers: Teacher[] = [
-  {
-    id: "1",
-    firstName: "Dr. Elena",
-    lastName: "García",
-    email: "elena.garcia@universidad.edu",
-    employeeId: "PROF001",
-    department: "Ingeniería",
-    specialties: ["Matemáticas", "Cálculo", "Álgebra"],
-    phone: "+52 555 123 4567",
-    office: "Edificio A, Oficina 201",
-    status: "active",
-    availableHours: ["09:00-11:00", "14:00-16:00"],
-    createdAt: "2023-01-15",
-  },
-  {
-    id: "2",
-    firstName: "Dr. Carlos",
-    lastName: "Rodríguez",
-    email: "carlos.rodriguez@universidad.edu",
-    employeeId: "PROF002",
-    department: "Medicina",
-    specialties: ["Anatomía", "Fisiología", "Patología"],
-    phone: "+52 555 234 5678",
-    office: "Edificio B, Oficina 305",
-    status: "active",
-    availableHours: ["10:00-12:00", "15:00-17:00"],
-    createdAt: "2023-02-20",
-  },
-  {
-    id: "3",
-    firstName: "Dra. María",
-    lastName: "López",
-    email: "maria.lopez@universidad.edu",
-    employeeId: "PROF003",
-    department: "Derecho",
-    specialties: ["Derecho Civil", "Derecho Penal", "Derecho Constitucional"],
-    phone: "+52 555 345 6789",
-    office: "Edificio C, Oficina 102",
-    status: "sabbatical",
-    availableHours: [],
-    createdAt: "2022-08-10",
-  },
-  {
-    id: "4",
-    firstName: "Dr. José",
-    lastName: "Martínez",
-    email: "jose.martinez@universidad.edu",
-    employeeId: "PROF004",
-    department: "Administración",
-    specialties: ["Finanzas", "Marketing", "Recursos Humanos"],
-    phone: "+52 555 456 7890",
-    office: "Edificio D, Oficina 401",
-    status: "active",
-    availableHours: ["08:00-10:00", "13:00-15:00"],
-    createdAt: "2023-03-05",
-  },
-]
-
 export function TeacherList() {
-  const [teachers, setTeachers] = useState<Teacher[]>(mockTeachers)
+  const [teachers, setTeachers] = useState<Teacher[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null)
   const [modalMode, setModalMode] = useState<"create" | "edit" | "view">("create")
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    loadTeachers()
+  }, [])
+
+  const loadTeachers = async () => {
+    try {
+      setIsLoading(true)
+      const supabase = createClient()
+      
+      // Obtener maestros
+      const { data: teachersData, error: teachersError } = await supabase
+        .from("teachers")
+        .select("*")
+        .order("created_at", { ascending: false })
+
+      if (teachersError) throw teachersError
+      
+      if (!teachersData || teachersData.length === 0) {
+        setTeachers([])
+        return
+      }
+      
+      // Obtener datos de usuarios (teachers.id = users.id)
+      const userIds = teachersData.map(t => t.id)
+      const { data: usersData, error: usersError } = await supabase
+        .from("users")
+        .select("id, full_name, email, user_type")
+        .in("id", userIds)
+
+      if (usersError) {
+        console.warn("Error al obtener datos de usuarios:", usersError)
+        // Continuar sin datos de usuario
+        setTeachers(teachersData)
+        return
+      }
+      
+      // Combinar datos: crear un mapa de usuarios por ID
+      const usersMap = new Map((usersData || []).map(u => [u.id, u]))
+      
+      // Combinar maestros con datos de usuarios
+      const teachersWithUserData = teachersData.map((teacher: any) => ({
+        ...teacher,
+        full_name: usersMap.get(teacher.id)?.full_name,
+        email: usersMap.get(teacher.id)?.email,
+        user_type: usersMap.get(teacher.id)?.user_type,
+      }))
+      
+      setTeachers(teachersWithUserData)
+    } catch (error) {
+      console.error("Error loading teachers:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const filteredTeachers = teachers.filter(
     (teacher) =>
-      teacher.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (teacher.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (teacher.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
       teacher.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
       teacher.specialties.some((specialty) => specialty.toLowerCase().includes(searchTerm.toLowerCase())),
   )
@@ -119,37 +115,60 @@ export function TeacherList() {
     setIsModalOpen(true)
   }
 
-  const handleDeleteTeacher = (teacherId: string) => {
+  const handleDeleteTeacher = async (teacherId: string) => {
     if (confirm("¿Estás seguro de que deseas eliminar este profesor?")) {
-      setTeachers(teachers.filter((t) => t.id !== teacherId))
-    }
-  }
+      try {
+        const supabase = createClient()
+        const { error } = await supabase.from("teachers").delete().eq("id", teacherId)
 
-  const handleSaveTeacher = (teacherData: Omit<Teacher, "id" | "createdAt">) => {
-    if (modalMode === "create") {
-      const newTeacher: Teacher = {
-        ...teacherData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString().split("T")[0],
+        if (error) throw error
+        await loadTeachers()
+      } catch (error) {
+        console.error("Error deleting teacher:", error)
+        alert("Error al eliminar el profesor")
       }
-      setTeachers([...teachers, newTeacher])
-    } else if (modalMode === "edit" && selectedTeacher) {
-      setTeachers(teachers.map((t) => (t.id === selectedTeacher.id ? { ...selectedTeacher, ...teacherData } : t)))
     }
-    setIsModalOpen(false)
   }
 
-  const getStatusBadge = (status: Teacher["status"]) => {
-    switch (status) {
-      case "active":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Activo</Badge>
-      case "inactive":
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Inactivo</Badge>
-      case "sabbatical":
-        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Sabático</Badge>
-      default:
-        return <Badge variant="secondary">{status}</Badge>
+  const handleSaveTeacher = async (teacherData: Omit<Teacher, "id" | "created_at" | "updated_at" | "full_name" | "email" | "user_type">) => {
+    try {
+      const supabase = createClient()
+
+      if (modalMode === "create") {
+        // ⚠️ IMPORTANTE: No se puede crear un maestro sin un usuario existente
+        // El maestro debe crearse desde el registro (register-form.tsx)
+        alert("Los maestros se crean automáticamente al registrarse. Por favor, usa el formulario de registro.")
+        setIsModalOpen(false)
+        return
+      } else if (modalMode === "edit" && selectedTeacher) {
+        // Solo actualizar campos permitidos (no id, que es la referencia a users)
+        const { error } = await supabase
+          .from("teachers")
+          .update({
+            department: teacherData.department,
+            specialties: teacherData.specialties,
+            available_hours: teacherData.available_hours,
+            phone: teacherData.phone,
+            office: teacherData.office,
+          })
+          .eq("id", selectedTeacher.id)
+        if (error) throw error
+      }
+
+      await loadTeachers()
+      setIsModalOpen(false)
+    } catch (error) {
+      console.error("Error saving teacher:", error)
+      alert("Error al guardar el profesor")
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -186,10 +205,10 @@ export function TeacherList() {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>ID Empleado</TableHead>
                   <TableHead>Departamento</TableHead>
                   <TableHead>Especialidades</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <TableHead>Teléfono</TableHead>
+                  <TableHead>Oficina</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -197,10 +216,9 @@ export function TeacherList() {
                 {filteredTeachers.map((teacher) => (
                   <TableRow key={teacher.id}>
                     <TableCell className="font-medium">
-                      {teacher.firstName} {teacher.lastName}
+                      {teacher.full_name || "N/A"}
                     </TableCell>
-                    <TableCell>{teacher.email}</TableCell>
-                    <TableCell>{teacher.employeeId}</TableCell>
+                    <TableCell>{teacher.email || "N/A"}</TableCell>
                     <TableCell>{teacher.department}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -216,7 +234,8 @@ export function TeacherList() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(teacher.status)}</TableCell>
+                    <TableCell>{teacher.phone || "N/A"}</TableCell>
+                    <TableCell>{teacher.office || "N/A"}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -232,10 +251,6 @@ export function TeacherList() {
                           <DropdownMenuItem onClick={() => handleEditTeacher(teacher)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Calendar className="mr-2 h-4 w-4" />
-                            Ver horarios
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDeleteTeacher(teacher.id)}

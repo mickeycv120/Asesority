@@ -13,14 +13,16 @@ import { useRouter } from "next/navigation"
 
 interface Student {
   id: string
-  student_id: string
   career: string
   semester: number
   phone: string | null
   address: string | null
-  user_id: string | null
   created_at: string
   updated_at: string
+  // Datos del usuario (desde JOIN con users)
+  full_name?: string
+  email?: string
+  user_type?: string
 }
 
 export function StudentList() {
@@ -40,10 +42,46 @@ export function StudentList() {
     try {
       setIsLoading(true)
       const supabase = createClient()
-      const { data, error } = await supabase.from("students").select("*").order("created_at", { ascending: false })
+      
+      // Obtener estudiantes
+      const { data: studentsData, error: studentsError } = await supabase
+        .from("students")
+        .select("*")
+        .order("created_at", { ascending: false })
 
-      if (error) throw error
-      setStudents(data || [])
+      if (studentsError) throw studentsError
+      
+      if (!studentsData || studentsData.length === 0) {
+        setStudents([])
+        return
+      }
+      
+      // Obtener datos de usuarios (students.id = users.id)
+      const userIds = studentsData.map(s => s.id)
+      const { data: usersData, error: usersError } = await supabase
+        .from("users")
+        .select("id, full_name, email, user_type")
+        .in("id", userIds)
+
+      if (usersError) {
+        console.warn("Error al obtener datos de usuarios:", usersError)
+        // Continuar sin datos de usuario
+        setStudents(studentsData)
+        return
+      }
+      
+      // Combinar datos: crear un mapa de usuarios por ID
+      const usersMap = new Map((usersData || []).map(u => [u.id, u]))
+      
+      // Combinar estudiantes con datos de usuarios
+      const studentsWithUserData = studentsData.map((student: any) => ({
+        ...student,
+        full_name: usersMap.get(student.id)?.full_name,
+        email: usersMap.get(student.id)?.email,
+        user_type: usersMap.get(student.id)?.user_type,
+      }))
+      
+      setStudents(studentsWithUserData)
     } catch (error) {
       console.error("Error loading students:", error)
     } finally {
@@ -53,7 +91,8 @@ export function StudentList() {
 
   const filteredStudents = students.filter(
     (student) =>
-      student.student_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (student.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
       student.career.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
@@ -90,15 +129,27 @@ export function StudentList() {
     }
   }
 
-  const handleSaveStudent = async (studentData: Omit<Student, "id" | "created_at" | "updated_at">) => {
+  const handleSaveStudent = async (studentData: Omit<Student, "id" | "created_at" | "updated_at" | "full_name" | "email" | "user_type">) => {
     try {
       const supabase = createClient()
 
       if (modalMode === "create") {
-        const { error } = await supabase.from("students").insert([studentData])
-        if (error) throw error
+        // ⚠️ IMPORTANTE: No se puede crear un estudiante sin un usuario existente
+        // El estudiante debe crearse desde el registro (register-form.tsx)
+        alert("Los estudiantes se crean automáticamente al registrarse. Por favor, usa el formulario de registro.")
+        setIsModalOpen(false)
+        return
       } else if (modalMode === "edit" && selectedStudent) {
-        const { error } = await supabase.from("students").update(studentData).eq("id", selectedStudent.id)
+        // Solo actualizar campos permitidos (no id, que es la referencia a users)
+        const { error } = await supabase
+          .from("students")
+          .update({
+            career: studentData.career,
+            semester: studentData.semester,
+            phone: studentData.phone,
+            address: studentData.address,
+          })
+          .eq("id", selectedStudent.id)
         if (error) throw error
       }
 
@@ -138,7 +189,7 @@ export function StudentList() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Buscar por matrícula o carrera..."
+                placeholder="Buscar por nombre, email o carrera..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -150,7 +201,8 @@ export function StudentList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Matrícula</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Carrera</TableHead>
                   <TableHead>Semestre</TableHead>
                   <TableHead>Teléfono</TableHead>
@@ -161,7 +213,8 @@ export function StudentList() {
               <TableBody>
                 {filteredStudents.map((student) => (
                   <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.student_id}</TableCell>
+                    <TableCell className="font-medium">{student.full_name || "N/A"}</TableCell>
+                    <TableCell>{student.email || "N/A"}</TableCell>
                     <TableCell>{student.career}</TableCell>
                     <TableCell>{student.semester}°</TableCell>
                     <TableCell>{student.phone || "N/A"}</TableCell>

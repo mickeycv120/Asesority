@@ -19,17 +19,17 @@ import { X } from "lucide-react"
 
 interface Teacher {
   id: string
-  firstName: string
-  lastName: string
-  email: string
-  employeeId: string
   department: string
   specialties: string[]
-  phone: string
-  office: string
-  status: "active" | "inactive" | "sabbatical"
-  availableHours: string[]
-  createdAt: string
+  available_hours: string | null
+  phone: string | null
+  office: string | null
+  created_at: string
+  updated_at: string
+  // Datos del usuario (desde JOIN con users)
+  full_name?: string
+  email?: string
+  user_type?: string
 }
 
 interface TeacherModalProps {
@@ -42,16 +42,11 @@ interface TeacherModalProps {
 
 export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: TeacherModalProps) {
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    employeeId: "",
     department: "",
     specialties: [] as string[],
+    available_hours: "",
     phone: "",
     office: "",
-    status: "active" as "active" | "inactive" | "sabbatical",
-    availableHours: [] as string[],
   })
 
   const [newSpecialty, setNewSpecialty] = useState("")
@@ -61,29 +56,19 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
   useEffect(() => {
     if (teacher && (mode === "edit" || mode === "view")) {
       setFormData({
-        firstName: teacher.firstName,
-        lastName: teacher.lastName,
-        email: teacher.email,
-        employeeId: teacher.employeeId,
         department: teacher.department,
         specialties: [...teacher.specialties],
-        phone: teacher.phone,
-        office: teacher.office,
-        status: teacher.status,
-        availableHours: [...teacher.availableHours],
+        available_hours: teacher.available_hours || "",
+        phone: teacher.phone || "",
+        office: teacher.office || "",
       })
     } else {
       setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        employeeId: "",
         department: "",
         specialties: [],
+        available_hours: "",
         phone: "",
         office: "",
-        status: "active",
-        availableHours: [],
       })
     }
     setNewSpecialty("")
@@ -92,12 +77,20 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (mode === "view") return
+    if (mode === "view" || mode === "create") {
+      // No permitir crear maestros desde aquí
+      return
+    }
 
     setIsLoading(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500)) // Simular API call
-      onSave(formData)
+      const dataToSave = {
+        ...formData,
+        available_hours: formData.available_hours || null,
+        phone: formData.phone || null,
+        office: formData.office || null,
+      }
+      await onSave(dataToSave)
     } finally {
       setIsLoading(false)
     }
@@ -129,19 +122,25 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
   }
 
   const addHour = () => {
-    if (newHour.trim() && !formData.availableHours.includes(newHour.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        availableHours: [...prev.availableHours, newHour.trim()],
-      }))
-      setNewHour("")
+    if (newHour.trim()) {
+      const currentHours = formData.available_hours ? formData.available_hours.split(",").map(h => h.trim()) : []
+      if (!currentHours.includes(newHour.trim())) {
+        const updatedHours = [...currentHours, newHour.trim()].join(", ")
+        setFormData((prev) => ({
+          ...prev,
+          available_hours: updatedHours,
+        }))
+        setNewHour("")
+      }
     }
   }
 
   const removeHour = (hour: string) => {
+    const currentHours = formData.available_hours ? formData.available_hours.split(",").map(h => h.trim()) : []
+    const updatedHours = currentHours.filter((h) => h !== hour).join(", ")
     setFormData((prev) => ({
       ...prev,
-      availableHours: prev.availableHours.filter((h) => h !== hour),
+      available_hours: updatedHours,
     }))
   }
 
@@ -179,75 +178,38 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
           <DialogDescription>{getDescription()}</DialogDescription>
+          {mode === "create" && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+              ⚠️ No se pueden crear maestros directamente. Los maestros se crean automáticamente cuando un usuario se registra como "Profesor" en el formulario de registro.
+            </div>
+          )}
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">Nombre</Label>
-              <Input
-                id="firstName"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                placeholder="Dr. Juan"
-                required
-                readOnly={isReadOnly}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Apellido</Label>
-              <Input
-                id="lastName"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                placeholder="Pérez"
-                required
-                readOnly={isReadOnly}
-              />
-            </div>
-          </div>
+          {mode === "view" && teacher && (
+            <>
+              <div className="space-y-2">
+                <Label>Nombre</Label>
+                <Input value={teacher.full_name || "N/A"} readOnly />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input value={teacher.email || "N/A"} readOnly />
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
-            <Label htmlFor="email">Correo Electrónico</Label>
+            <Label htmlFor="department">Departamento</Label>
             <Input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
+              id="department"
+              name="department"
+              value={formData.department}
               onChange={handleChange}
-              placeholder="juan.perez@universidad.edu"
+              placeholder="Ingeniería"
               required
               readOnly={isReadOnly}
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="employeeId">ID Empleado</Label>
-              <Input
-                id="employeeId"
-                name="employeeId"
-                value={formData.employeeId}
-                onChange={handleChange}
-                placeholder="PROF001"
-                required
-                readOnly={isReadOnly}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="department">Departamento</Label>
-              <Input
-                id="department"
-                name="department"
-                value={formData.department}
-                onChange={handleChange}
-                placeholder="Ingeniería"
-                required
-                readOnly={isReadOnly}
-              />
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -273,22 +235,6 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
                 readOnly={isReadOnly}
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="status">Estado</Label>
-            <select
-              id="status"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-              disabled={isReadOnly}
-            >
-              <option value="active">Activo</option>
-              <option value="inactive">Inactivo</option>
-              <option value="sabbatical">Sabático</option>
-            </select>
           </div>
 
           {/* Especialidades */}
@@ -321,12 +267,17 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
           <div className="space-y-2">
             <Label>Horarios Disponibles</Label>
             <div className="flex flex-wrap gap-2 mb-2">
-              {formData.availableHours.map((hour, index) => (
-                <Badge key={index} variant="outline" className="flex items-center gap-1">
-                  {hour}
-                  {!isReadOnly && <X className="h-3 w-3 cursor-pointer" onClick={() => removeHour(hour)} />}
-                </Badge>
-              ))}
+              {formData.available_hours
+                ? formData.available_hours.split(",").map((hour, index) => {
+                    const trimmedHour = hour.trim()
+                    return trimmedHour ? (
+                      <Badge key={index} variant="outline" className="flex items-center gap-1">
+                        {trimmedHour}
+                        {!isReadOnly && <X className="h-3 w-3 cursor-pointer" onClick={() => removeHour(trimmedHour)} />}
+                      </Badge>
+                    ) : null
+                  })
+                : null}
             </div>
             {!isReadOnly && (
               <div className="flex gap-2">
