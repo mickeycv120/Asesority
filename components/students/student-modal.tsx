@@ -16,16 +16,15 @@ import { Label } from "@/components/ui/label"
 
 interface Student {
   id: string
+  student_id: string
+  enrollment_number: string
   career: string
   semester: number
   phone: string | null
   address: string | null
+  user_id: string | null
   created_at: string
   updated_at: string
-  // Datos del usuario (desde JOIN con users)
-  full_name?: string
-  email?: string
-  user_type?: string
 }
 
 interface StudentModalProps {
@@ -38,10 +37,13 @@ interface StudentModalProps {
 
 export function StudentModal({ isOpen, onClose, onSave, student, mode }: StudentModalProps) {
   const [formData, setFormData] = useState({
+    student_id: "",
+    enrollment_number: "",
     career: "",
     semester: 1,
     phone: "",
     address: "",
+    user_id: null as string | null,
   })
 
   const [isLoading, setIsLoading] = useState(false)
@@ -49,27 +51,30 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
   useEffect(() => {
     if (student && (mode === "edit" || mode === "view")) {
       setFormData({
+        student_id: student.student_id,
+        enrollment_number: student.enrollment_number,
         career: student.career,
         semester: student.semester,
         phone: student.phone || "",
         address: student.address || "",
+        user_id: student.user_id,
       })
     } else {
       setFormData({
+        student_id: "",
+        enrollment_number: "",
         career: "",
         semester: 1,
         phone: "",
         address: "",
+        user_id: null,
       })
     }
   }, [student, mode])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (mode === "view" || mode === "create") {
-      // No permitir crear estudiantes desde aquí
-      return
-    }
+    if (mode === "view") return
 
     setIsLoading(true)
     try {
@@ -103,31 +108,26 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
           </DialogTitle>
           <DialogDescription>
             {mode === "create"
-              ? "Los estudiantes se crean automáticamente al registrarse. Usa el formulario de registro para crear nuevos estudiantes."
+              ? "Completa la información para registrar un nuevo estudiante"
               : mode === "edit"
                 ? "Modifica la información del estudiante"
                 : "Información detallada del estudiante"}
           </DialogDescription>
-          {mode === "create" && (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
-              ⚠️ No se pueden crear estudiantes directamente. Los estudiantes se crean automáticamente cuando un usuario se registra como "Estudiante" en el formulario de registro.
-            </div>
-          )}
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "view" && student && (
-            <>
-              <div className="space-y-2">
-                <Label>Nombre</Label>
-                <Input value={student.full_name || "N/A"} readOnly />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input value={student.email || "N/A"} readOnly />
-              </div>
-            </>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="student_id">Matrícula</Label>
+            <Input
+              id="enrollment_number"
+              name="enrollment_number"
+              value={formData.enrollment_number}
+              onChange={handleChange}
+              placeholder="EST001"
+              required
+              readOnly={isReadOnly}
+            />
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="career">Carrera</Label>
