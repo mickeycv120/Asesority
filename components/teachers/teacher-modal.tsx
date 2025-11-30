@@ -32,10 +32,18 @@ interface Teacher {
   user_type?: string
 }
 
+type TeacherFormData = {
+  department: string
+  specialties: string[]
+  available_hours: string | null
+  phone: string | null
+  office: string | null
+}
+
 interface TeacherModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (teacher: Omit<Teacher, "id" | "createdAt">) => void
+  onSave: (teacher: TeacherFormData) => void
   teacher: Teacher | null
   mode: "create" | "edit" | "view"
 }
