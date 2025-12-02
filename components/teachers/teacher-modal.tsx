@@ -24,7 +24,7 @@ interface Teacher {
   employee_number: string
   department: string
   specialties: string[] | string
-  available_hours: string | null
+  available_hours: string[] | null
   phone: string | null
   office: string | null
   created_at: string
@@ -35,7 +35,7 @@ interface Teacher {
 type TeacherFormData = {
   department: string
   specialties: string[]
-  available_hours: string | null
+  available_hours: string[] | null
   phone: string | null
   office: string | null
 }
@@ -52,7 +52,7 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
   const [formData, setFormData] = useState({
     department: "",
     specialties: [] as string[],
-    available_hours: "",
+    available_hours: [] as string[],
     phone: "",
     office: "",
   })
@@ -76,10 +76,17 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
             })()
           : []
 
+      // Manejar available_hours que ahora viene como array desde la base de datos
+      const availableHoursArray = Array.isArray(teacher.available_hours)
+        ? teacher.available_hours
+        : teacher.available_hours
+          ? [teacher.available_hours]
+          : []
+
       setFormData({
         department: teacher.department,
         specialties: specialtiesArray,
-        available_hours: teacher.available_hours || "",
+        available_hours: availableHoursArray,
         phone: teacher.phone || "",
         office: teacher.office || "",
       })
@@ -87,7 +94,7 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
       setFormData({
         department: "",
         specialties: [],
-        available_hours: "",
+        available_hours: [],
         phone: "",
         office: "",
       })
@@ -107,7 +114,7 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
     try {
       const dataToSave = {
         ...formData,
-        available_hours: formData.available_hours || null,
+        available_hours: formData.available_hours.length > 0 ? formData.available_hours : null,
         phone: formData.phone || null,
         office: formData.office || null,
       }
@@ -144,12 +151,11 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
 
   const addHour = () => {
     if (newHour.trim()) {
-      const currentHours = formData.available_hours ? formData.available_hours.split(",").map(h => h.trim()) : []
-      if (!currentHours.includes(newHour.trim())) {
-        const updatedHours = [...currentHours, newHour.trim()].join(", ")
+      const trimmedHour = newHour.trim()
+      if (!formData.available_hours.includes(trimmedHour)) {
         setFormData((prev) => ({
           ...prev,
-          available_hours: updatedHours,
+          available_hours: [...prev.available_hours, trimmedHour],
         }))
         setNewHour("")
       }
@@ -157,11 +163,9 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
   }
 
   const removeHour = (hour: string) => {
-    const currentHours = formData.available_hours ? formData.available_hours.split(",").map(h => h.trim()) : []
-    const updatedHours = currentHours.filter((h) => h !== hour).join(", ")
     setFormData((prev) => ({
       ...prev,
-      available_hours: updatedHours,
+      available_hours: prev.available_hours.filter((h) => h !== hour),
     }))
   }
 
@@ -293,17 +297,12 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
           <div className="space-y-2">
             <Label>Horarios Disponibles</Label>
             <div className="flex flex-wrap gap-2 mb-2">
-              {formData.available_hours
-                ? formData.available_hours.split(",").map((hour, index) => {
-                    const trimmedHour = hour.trim()
-                    return trimmedHour ? (
-                      <Badge key={index} variant="outline" className="flex items-center gap-1">
-                        {trimmedHour}
-                        {!isReadOnly && <X className="h-3 w-3 cursor-pointer" onClick={() => removeHour(trimmedHour)} />}
-                      </Badge>
-                    ) : null
-                  })
-                : null}
+              {formData.available_hours.map((hour, index) => (
+                <Badge key={index} variant="outline" className="flex items-center gap-1">
+                  {hour}
+                  {!isReadOnly && <X className="h-3 w-3 cursor-pointer" onClick={() => removeHour(hour)} />}
+                </Badge>
+              ))}
             </div>
             {!isReadOnly && (
               <div className="flex gap-2">

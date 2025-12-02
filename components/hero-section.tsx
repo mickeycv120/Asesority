@@ -125,7 +125,7 @@ export function HeroSection() {
                         <div className="text-sm text-muted-foreground">Prof. López - 10:00</div>
                       </div>
                     </div>
-                    <div className="text-sm font-medium text-blue-600">Grupal</div>
+                    <div className="text-sm font-medium text-red-600">Cancelada</div>
                   </div>
                 </div>
 
