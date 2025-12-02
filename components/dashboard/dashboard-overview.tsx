@@ -51,12 +51,12 @@ export function DashboardOverview({ stats, recentAdvisories, activities }: Dashb
 
       <div className="grid gap-6 md:grid-cols-2">
         <ActivityFeed activities={activities} />
-        <div className="space-y-6">
-          {/* Espacio para futuros componentes como gráficos */}
+        {/* <div className="space-y-6">
+          Espacio para futuros componentes como gráficos 
           <div className="h-64 bg-muted/30 rounded-lg flex items-center justify-center text-muted-foreground">
             Espacio reservado para gráficos y estadísticas adicionales
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   )

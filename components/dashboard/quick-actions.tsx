@@ -31,8 +31,8 @@ export function QuickActions() {
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5" />
                 <div className="text-left">
-                  <div className="font-medium">Gestionar Alumnos</div>
-                  <div className="text-sm text-muted-foreground">Ver y editar estudiantes</div>
+                  <div className="font-medium">Mi Perfil</div>
+                  <div className="text-sm text-muted-foreground">Ver y editar mi perfil</div>
                 </div>
               </div>
             </Link>
@@ -44,7 +44,7 @@ export function QuickActions() {
                 <GraduationCap className="h-5 w-5" />
                 <div className="text-left">
                   <div className="font-medium">Gestionar Maestros</div>
-                  <div className="text-sm text-muted-foreground">Ver y editar profesores</div>
+                  <div className="text-sm text-muted-foreground">Ver profesores</div>
                 </div>
               </div>
             </Link>
@@ -62,7 +62,7 @@ export function QuickActions() {
             </Link>
           </Button>
 
-          <Button variant="outline" className="justify-start h-auto p-4 bg-transparent">
+          {/* <Button variant="outline" className="justify-start h-auto p-4 bg-transparent">
             <div className="flex items-center gap-3">
               <BarChart3 className="h-5 w-5" />
               <div className="text-left">
@@ -70,7 +70,7 @@ export function QuickActions() {
                 <div className="text-sm text-muted-foreground">Estadísticas y análisis</div>
               </div>
             </div>
-          </Button>
+          </Button> */}
         </div>
       </CardContent>
     </Card>

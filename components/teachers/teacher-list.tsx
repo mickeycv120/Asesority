@@ -20,7 +20,7 @@ interface Teacher {
   specialties: string[] | string // Puede venir como array o string desde la vista
   phone: string | null
   office: string | null
-  available_hours: string | null
+  available_hours: string[] | null
   created_at: string
   updated_at: string
   user_type?: string
