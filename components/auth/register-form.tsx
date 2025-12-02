@@ -31,7 +31,6 @@ export function RegisterForm() {
     department: "",
     specialties: "",
   })
-  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -224,7 +223,7 @@ export function RegisterForm() {
             {formData.userType === "student" && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="studentId">Matrícula</Label>
+                  <Label htmlFor="studentId">Número de Control</Label>
                   <Input
                     id="studentId"
                     name="studentId"

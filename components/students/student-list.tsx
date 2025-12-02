@@ -25,7 +25,6 @@ export function StudentList() {
   const [student, setStudent] = useState<Student | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
-  const [modalMode, setModalMode] = useState<"create" | "edit" | "view">("create")
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
@@ -61,7 +60,6 @@ export function StudentList() {
 
   const handleEditProfile = () => {
     setSelectedStudent(student)
-    setModalMode("edit")
     setIsModalOpen(true)
   }
 
@@ -131,7 +129,7 @@ export function StudentList() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Mi Perfil</CardTitle>
-              <CardDescription>Visualiza y edita tu información personal</CardDescription>
+              <CardDescription className="mt-2">Visualiza y edita tu información personal</CardDescription>
             </div>
             <Button onClick={handleEditProfile}>
               <Edit className="h-4 w-4 mr-2" />
@@ -147,7 +145,7 @@ export function StudentList() {
             </div>
 
             <div className="space-y-2">
-              <div className="text-sm font-medium text-muted-foreground">Matrícula</div>
+              <div className="text-sm font-medium text-muted-foreground">Número de Control</div>
               <div className="text-base">{student.enrollment_number}</div>
             </div>
 
@@ -184,7 +182,6 @@ export function StudentList() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveStudent}
         student={selectedStudent}
-        mode={modalMode}
       />
     </div>
   )

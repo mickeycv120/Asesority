@@ -201,7 +201,7 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
           <DialogDescription>{getDescription()}</DialogDescription>
           {mode === "create" && (
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
-              ⚠️ No se pueden crear maestros directamente. Los maestros se crean automáticamente cuando un usuario se registra como "Profesor" en el formulario de registro.
+              ⚠️ No se pueden crear maestros directamente. Los maestros se crean automáticamente cuando un usuario se registra como &quot;Profesor&quot; en el formulario de registro.
             </div>
           )}
         </DialogHeader>
@@ -275,7 +275,12 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
                   value={newSpecialty}
                   onChange={(e) => setNewSpecialty(e.target.value)}
                   placeholder="Agregar especialidad"
-                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecialty())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      addSpecialty()
+                    }
+                  }}
                 />
                 <Button type="button" onClick={addSpecialty} variant="outline">
                   Agregar
@@ -306,7 +311,12 @@ export function TeacherModal({ isOpen, onClose, onSave, teacher, mode }: Teacher
                   value={newHour}
                   onChange={(e) => setNewHour(e.target.value)}
                   placeholder="ej: 09:00-11:00"
-                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addHour())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      addHour()
+                    }
+                  }}
                 />
                 <Button type="button" onClick={addHour} variant="outline">
                   Agregar

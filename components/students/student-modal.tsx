@@ -32,10 +32,9 @@ interface StudentModalProps {
   onClose: () => void
   onSave: (student: Omit<Student, "id" | "created_at" | "updated_at">) => void
   student: Student | null
-  mode: "create" | "edit" | "view"
 }
 
-export function StudentModal({ isOpen, onClose, onSave, student, mode }: StudentModalProps) {
+export function StudentModal({ isOpen, onClose, onSave, student }: StudentModalProps) {
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -49,7 +48,7 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    if (student && (mode === "edit" || mode === "view")) {
+    if (student) {
       setFormData({
         full_name: student.full_name || "",
         email: student.email || "",
@@ -70,11 +69,10 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
         address: "",
       })
     }
-  }, [student, mode])
+  }, [student])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (mode === "view") return
 
     setIsLoading(true)
     try {
@@ -97,34 +95,15 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
     }))
   }
 
-  const isReadOnly = mode === "view"
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>
-            {mode === "create" ? "Crear Nuevo Alumno" : mode === "edit" ? "Editar Alumno" : "Detalles del Alumno"}
-          </DialogTitle>
-          <DialogDescription>
-            {mode === "create"
-              ? "Completa la información para registrar un nuevo estudiante"
-              : mode === "edit"
-                ? "Modifica la información del estudiante"
-                : "Información detallada del estudiante"}
-          </DialogDescription>
+          <DialogTitle>Editar Alumno</DialogTitle>
+          <DialogDescription>Modifica la información del estudiante</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "view" && student && (
-            <>
-              <div className="space-y-2">
-                <Label>ID</Label>
-                <Input value={student.id} readOnly />
-              </div>
-            </>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="full_name">Nombre Completo</Label>
             <Input
@@ -134,7 +113,6 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
               onChange={handleChange}
               placeholder="Juan Pérez"
               required
-              readOnly={isReadOnly}
             />
           </div>
 
@@ -148,20 +126,18 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
               onChange={handleChange}
               placeholder="juan@universidad.edu"
               required
-              readOnly={isReadOnly}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="enrollment_number">Matrícula</Label>
+            <Label htmlFor="enrollment_number">Número de Control</Label>
             <Input
               id="enrollment_number"
               name="enrollment_number"
               value={formData.enrollment_number}
               onChange={handleChange}
-              placeholder="EST001"
+              placeholder="A00123456"
               required
-              readOnly={isReadOnly}
             />
           </div>
 
@@ -174,7 +150,6 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
               onChange={handleChange}
               placeholder="Ingeniería en Sistemas"
               required
-              readOnly={isReadOnly}
             />
           </div>
 
@@ -189,7 +164,6 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
               value={formData.semester}
               onChange={handleChange}
               required
-              readOnly={isReadOnly}
             />
           </div>
 
@@ -201,7 +175,6 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
               value={formData.phone}
               onChange={handleChange}
               placeholder="555-0101"
-              readOnly={isReadOnly}
             />
           </div>
 
@@ -213,28 +186,17 @@ export function StudentModal({ isOpen, onClose, onSave, student, mode }: Student
               value={formData.address}
               onChange={handleChange}
               placeholder="Calle Principal 123"
-              readOnly={isReadOnly}
             />
           </div>
 
-          {mode !== "view" && (
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Guardando..." : mode === "create" ? "Crear Alumno" : "Guardar Cambios"}
-              </Button>
-            </DialogFooter>
-          )}
-
-          {mode === "view" && (
-            <DialogFooter>
-              <Button type="button" onClick={onClose}>
-                Cerrar
-              </Button>
-            </DialogFooter>
-          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Guardando..." : "Guardar Cambios"}
+            </Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

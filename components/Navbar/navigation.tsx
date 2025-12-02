@@ -5,13 +5,17 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Menu, X, GraduationCap, LogOut, User } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/clients"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const router = useRouter()
+  const pathname = usePathname()
+
+  // Función helper para determinar si un link está activo
+  const isActive = (path: string) => pathname === path
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -38,27 +42,55 @@ export function Navigation() {
   }
 
   return (
-    <nav className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b border-border">
+    <nav className="bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 sticky top-0 z-50 w-full border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <GraduationCap className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl text-foreground">UniAsesorías</span>
+            <span className="font-bold text-xl text-foreground">Asesority</span>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/asesorias" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link 
+              href="/asesorias" 
+              className={`transition-colors ${
+                isActive("/asesorias") 
+                  ? "text-foreground font-semibold bg-gray-200 rounded-md px-2 py-1" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
               Asesorías
             </Link>
-            <Link href="/maestros" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link 
+              href="/maestros" 
+              className={`transition-colors ${
+                isActive("/maestros") 
+                  ? "text-foreground font-semibold bg-gray-200 rounded-md px-2 py-1" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
               Maestros
             </Link>
-            <Link href="/alumnos" className="text-muted-foreground hover:text-foreground transition-colors">
-              Alumnos
+            <Link 
+              href="/my-profile" 
+              className={`transition-colors ${
+                isActive("/my-profile") 
+                  ? "text-foreground font-semibold bg-gray-200 rounded-md px-2 py-1" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Mi Perfil
             </Link>
-            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link 
+              href="/dashboard" 
+              className={`transition-colors ${
+                isActive("/dashboard") 
+                  ? "text-foreground font-semibold bg-gray-200 rounded-md px-2 py-1" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
               Dashboard
             </Link>
           </div>
@@ -98,28 +130,44 @@ export function Navigation() {
           <div className="md:hidden py-4 space-y-4">
             <Link
               href="/asesorias"
-              className="block text-muted-foreground hover:text-foreground transition-colors"
+              className={`block transition-colors ${
+                isActive("/asesorias") 
+                  ? "text-foreground font-semibold bg-gray-200 rounded-md px-2 py-1" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
               onClick={() => setIsOpen(false)}
             >
               Asesorías
             </Link>
             <Link
               href="/maestros"
-              className="block text-muted-foreground hover:text-foreground transition-colors"
+              className={`block transition-colors ${
+                isActive("/maestros") 
+                  ? "text-foreground font-semibold bg-gray-200 rounded-md px-2 py-1" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
               onClick={() => setIsOpen(false)}
             >
               Maestros
             </Link>
             <Link
               href="/alumnos"
-              className="block text-muted-foreground hover:text-foreground transition-colors"
+              className={`block transition-colors ${
+                isActive("/alumnos") 
+                  ? "text-foreground font-semibold bg-gray-200 rounded-md px-2 py-1" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
               onClick={() => setIsOpen(false)}
             >
               Alumnos
             </Link>
             <Link
               href="/dashboard"
-              className="block text-muted-foreground hover:text-foreground transition-colors"
+              className={`block transition-colors ${
+                isActive("/dashboard") 
+                  ? "text-foreground font-semibold bg-gray-200 rounded-md px-2 py-1" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
               onClick={() => setIsOpen(false)}
             >
               Dashboard

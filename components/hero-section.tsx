@@ -147,7 +147,7 @@ export function HeroSection() {
       {/* Features Section */}
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">¿Por qué elegir UniAsesorías?</h2>
+          <h2 className="text-3xl font-bold mb-4">¿Por qué elegir Asesority</h2>
           <p className="text-xl text-muted-foreground">
             Simplificamos la gestión académica para toda la comunidad universitaria
           </p>
